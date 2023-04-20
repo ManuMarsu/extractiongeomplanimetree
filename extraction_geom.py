@@ -6,7 +6,7 @@ wb = xlsxwriter.Workbook('geom.xlsx')
 ws = {}
 min_max_z = {}
 
-with open("mascaret.lis", "r") as f:
+with open("C:/Users/manuel.collongues/AppData/Roaming/QGIS/QGIS3/profiles/default/python/plugins/Mascaret/mascaret/mascaret.lis", "r") as f:
     lines = f.readlines()
     section_profil = 0
     ligne_profil = False
@@ -16,7 +16,7 @@ with open("mascaret.lis", "r") as f:
             nom_profil = line.split(',')[1].split('\n')[0].split(' : ')[1].replace(' ', '') + '-' + line.split(',')[0][-1]
             print(nom_profil, line)
             min_max_z[nom_profil] = [1000000, -1000000, 0]
-            ws[nom_profil] = wb.add_worksheet(nom_profil)
+            ws[nom_profil] = wb.add_worksheet(nom_profil.split('-')[0])
             ws[nom_profil].write(0, 0, "Z")
             ws[nom_profil].write(0, 1, "db1")
             ws[nom_profil].write(0, 2, "db2")
@@ -26,6 +26,7 @@ with open("mascaret.lis", "r") as f:
             ws[nom_profil].write(0, 6, "ds2")
             ws[nom_profil].write(0, 7, "dbs")
             ws[nom_profil].write(0, 8, "dss")
+            ws[nom_profil].write(0, 9, "ds1+ds2")
             section_profil = 1
             
         if section_profil > 0:
@@ -57,6 +58,7 @@ with open("mascaret.lis", "r") as f:
                 ws[nom_profil].write(section_profil-8, 6, t_ds2)
                 ws[nom_profil].write(section_profil-8, 7, t_dbs)
                 ws[nom_profil].write(section_profil-8, 8, t_dss)
+                ws[nom_profil].write(section_profil-8, 9, t_ds1 + t_ds2)
                 # print(nom_profil, t_Z, t_db1, t_db2, t_dp1, t_dp2, t_ds1, t_ds2, t_dbs, t_dss)
             else:
                 section_profil = 0
@@ -74,49 +76,57 @@ with open("mascaret.lis", "r") as f:
             (prof_suiv, absc_suiv) = abs_profils[i+1]
             d = f'={abs_profils[i-1][0]}!$A$1000+{abs_profils[i+1][0]}!$A$2/2'
 
-            trad = {'F': 'Lit mineur', 'G': 'Lit majeur'}
+            trad = {'F': 'Lit mineur', 'G': 'Lit majeur', 'J': 'Lit complet'}
+
+            prof_prec = prof_prec.split('-')[0]
+            prof_suiv = prof_suiv.split('-')[0]
+            nom_profil = prof_cur.split('-')[0]
 
             # Courbes profil précédent
-            for col in ['F', 'G']:
+            # for col in ['F', 'G', 'J']:
+            for col in ['J']:
                 chart.add_series({
-                    'name': f'Prec_{trad[col]}_{str(absc_cur - absc_prec)}',
+                    'name': f'Prec_{trad[col]}_{str(round(absc_cur - absc_prec, 1))}',
                     'categories': f'={prof_prec}!$A$2:$A$1000', 
                     'values': f'={prof_prec}!${col}$2:${col}$1000', 
                 })
             # Courbes profil actuel
-            for col in ['F', 'G']:
+            # for col in ['F', 'G', 'J']:
+            for col in ['J']:
                 chart.add_series({
-                    'name': f'{prof_cur}_{trad[col]}_{absc_cur}',
-                    'categories': f'={prof_cur}!$A$2:$A$1000', 
-                    'values': f'={prof_cur}!${col}$2:${col}$1000', 
+                    'name': f'{nom_profil}_{trad[col]}_{absc_cur}',
+                    'categories': f'={nom_profil}!$A$2:$A$1000', 
+                    'values': f'={nom_profil}!${col}$2:${col}$1000', 
                 })
             # Courbes profil suivant
-            for col in ['F', 'G']:
+            # for col in ['F', 'G', 'J']:
+            for col in ['J']:
                 chart.add_series({
-                    'name': f'Suiv_{trad[col]}_{str(absc_suiv - absc_cur)}',
+                    'name': f'Suiv_{trad[col]}_{str(round(absc_suiv - absc_cur, 1))}',
                     'categories': f'={prof_suiv}!$A$2:$A$1000', 
                     'values': f'={prof_suiv}!${col}$2:${col}$1000', 
                 })
 
-            chart.set_title({'name': prof_cur})
+            chart.set_title({'name': f'Profil {nom_profil} - Abscisse {absc_cur}'})
             chart.set_x_axis({'name': 'Z', 'min': min_max_z[prof_cur][0] - 1, 'max': min_max_z[prof_cur][0] + 4})
             chart.set_y_axis({'name': 'Section hydraulique', 'min': 0, 'max': 100})
             
-            cs.append(wb.add_chartsheet(f'={prof_cur}-{absc_cur}'))
+            cs.append(wb.add_chartsheet(f'={nom_profil}'))
             cs[i-1].set_chart(chart)
 
     # Ajout des graphiques correspondants à chaque profil
     for nom_profil, profil in ws.items():
         chart = wb.add_chart({'type': 'scatter', 'subtype': 'straight'})
         # for col in ['B', 'C', 'D', 'E', 'F', 'G', 'H', 'I']:
-        for col in ['F', 'G']:
+        nom_profil_simpl = nom_profil.split('-')[0]
+        for col in ['F', 'G', 'J']:
             chart.add_series({
-                'name': f'={nom_profil}!${col}$1',
-                'categories': f'={nom_profil}!$A$2:$A$1000', 
-                'values': f'={nom_profil}!${col}$2:${col}$1000', 
+                'name': f'={nom_profil_simpl}!${col}$1',
+                'categories': f'={nom_profil_simpl}!$A$2:$A$1000', 
+                'values': f'={nom_profil_simpl}!${col}$2:${col}$1000', 
             })
 
-        chart.set_title({'name': nom_profil})
+        chart.set_title({'name': nom_profil_simpl})
         chart.set_size({'width': 1200, 'height': 750})
         ws[nom_profil].insert_chart('D2', chart)
         chart.set_x_axis({'name': 'Z', 'min': min_max_z[nom_profil][0], 'max': min_max_z[nom_profil][0] + 6})
@@ -124,3 +134,6 @@ with open("mascaret.lis", "r") as f:
 
 
 wb.close()
+
+# Ouverture du fichier Excel
+os.startfile('geom.xlsx')
